@@ -1,6 +1,6 @@
 # Building A Development Spark Cluster with Docker
 
-## This is forked from Overview
+## Overview: This is forked from cormaxed/spark-postgres. 
 
 My goal is to build a decent approximation of a production Apache Spark EMR environment for development and testing.
 
@@ -129,40 +129,127 @@ psql --user postgres
 Inside `psql` let's generate 1 million random coin toss events.
 
 ```sql
+CREATE TABLE public.coin_toss_small (
+event_ts timestamp default now(),
+outcome TEXT NOT NULL
+);
+
+
+
+INSERT INTO public.coin_toss_small(outcome)
+SELECT CASE WHEN RANDOM() < 0.5 THEN 'heads' ELSE 'tails' END FROM generate_series(1, 1000000);
+```
+
+Now create another table inside `psql` and let's generate 20 million random coin toss events.
+
+
+```sql
 CREATE TABLE public.coin_toss (
 event_ts timestamp default now(),
 outcome TEXT NOT NULL
 );
 
+
+
 INSERT INTO public.coin_toss(outcome)
-SELECT CASE WHEN RANDOM() < 0.5 THEN 'heads' ELSE 'tails' END FROM generate_series(1, 1000000);
+SELECT CASE WHEN RANDOM() < 0.5 THEN 'heads' ELSE 'tails' END FROM generate_series(1, 20000000);
 ```
 
-### Calculating the Frequencies With Spark
+### Running main.py
 
 ```python
 import pyspark
 
-conf = pyspark.SparkConf().setAppName('Postgres').setMaster('spark://spark:7077')
-sc = pyspark.SparkContext(conf=conf)
-session = pyspark.sql.SparkSession(sc)
+if __name__ == '__main__':
+    sc = pyspark.SparkContext(appName='CoinToss')
 
-jdbc_url = 'jdbc:postgresql://postgres/postgres'
-connection_properties = {
-'user': 'postgres',
-'password': 'postgres',
-'driver': 'org.postgresql.Driver',
-'stringtype': 'unspecified'}
+    try:
+        session = pyspark.sql.SparkSession(sc)
 
-df = session.read.jdbc(jdbc_url,'public.coin_toss',properties=connection_properties)
+        jdbc_url = 'jdbc:postgresql://postgres/postgres'
+        connection_properties = {
+            'user': 'postgres',
+                    'password': 'postgres',
+                    'driver': 'org.postgresql.Driver',
+                    'stringtype': 'unspecified'}
 
-samples = df.count()
-stats = df.groupBy('outcome').count()
+        df = session.read.jdbc(jdbc_url, 'public.coin_toss',
+                               properties=connection_properties)
 
-for row in stats.rdd.collect():
-print("{} {}%".format(row['outcome'], row['count'] / samples * 100))
+        samples = df.count()
+        heads_freq = df.filter("outcome == 'heads'").count() / samples
+        tails_freq = df.filter("outcome == 'tails'").count() / samples
+        stats = df.groupBy('outcome').count()
 
-sc.stop()
+        for row in stats.rdd.collect():
+            print("{} {}%".format(row['outcome'],
+                                  row['count'] / samples * 100))
+    finally:
+        sc.stop()
+
+
+```
+
+### Running main1.py
+
+```python
+import pyspark
+
+if __name__ == '__main__':
+    sc = pyspark.SparkContext(appName='CoinToss')
+
+    try:
+        session = pyspark.sql.SparkSession(sc)
+
+        jdbc_url = 'jdbc:postgresql://postgres/postgres'
+        connection_properties = {
+            'user': 'postgres',
+                    'password': 'postgres',
+                    'driver': 'org.postgresql.Driver',
+                    'stringtype': 'unspecified'}
+
+        df = session.read.jdbc(jdbc_url, 'public.coin_toss_small',
+                               properties=connection_properties)
+
+        samples = df.count()
+        heads_freq = df.filter("outcome == 'heads'").count() / samples
+        tails_freq = df.filter("outcome == 'tails'").count() / samples
+        stats = df.groupBy('outcome').count()
+
+        for row in stats.rdd.collect():
+            print("{} {}%".format(row['outcome'],
+                                  row['count'] / samples * 100))
+    finally:
+        sc.stop()
+
+
+
+```
+### Running maincorrected.py
+
+```python
+import pyspark
+
+if __name__ == '__main__':
+    sc = pyspark.SparkContext(appName='CoinToss')
+
+    try:
+        session = pyspark.sql.SparkSession(sc)
+
+        df = session.read.format("jdbc").option("driver","org.postgresql.Driver").option("url", "jdbc:postgresql://postgres/postgres").option("query","select * from public.coin_toss").option("numPartitions",5).option("fetchsize", 2000).option("user", "postgres").option("password", "postgres").load()
+        samples = df.count()
+        heads_freq = df.filter("outcome == 'heads'").count() / samples
+        tails_freq = df.filter("outcome == 'tails'").count() / samples
+
+        stats = df.groupBy('outcome').count()
+
+        for row in stats.rdd.collect():
+            print("{} {}%".format(row['outcome'],
+                                  row['count'] / samples * 100))
+    finally:
+        sc.stop()
+
+
 ```
 
 ## Running A Spark Job
@@ -171,8 +258,12 @@ Instead of driving everything from a Jupyter notebook, we can run our Python cod
 
 I've packaged the coin toss example as a Python file at `pyspark/src/main.py`.
 
-We can submit the code as a job to spark by running:
+We can submit the code as a job to spark by running spark-submit OR spark-submit1 or spark-submit2. spark-submit will run the main.py which will throw OUT OF MEMORY exception. spark-submit1 will go through, because we are querying small data. To make , main.py corrected, use spark-submit2, which will use fetchsize parameter in spark's JDBC :
 
 ```bash
 make spark-submit
+OR
+make spark-submit1
+OR
+make spark-submit2
 ```
