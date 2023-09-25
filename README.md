@@ -258,7 +258,7 @@ Instead of driving everything from a Jupyter notebook, we can run our Python cod
 
 I've packaged the coin toss example as a Python file at `pyspark/src/main.py`.
 
-We can submit the code as a job to spark by running spark-submit OR spark-submit1 or spark-submit2. spark-submit will run the main.py which will throw OUT OF MEMORY exception. spark-submit1 will go through, because we are querying small data. To make , main.py corrected, use spark-submit2, which will use fetchsize parameter in spark's JDBC :
+We can submit the code as a job to spark by running spark-submit OR spark-submit1 or spark-submit2. spark-submit will run the main.py which will throw OUT OF MEMORY exception. spark-submit1 will go through, because we are querying small data. Now to correct the OUT OF MEMORY issue, execute maincorrected.py by using spark-submit2, which will use fetchsize parameter in spark's JDBC :
 
 ```bash
 make spark-submit
