@@ -1,6 +1,6 @@
 # Building A Development Spark Cluster with Docker & Illustrate how to avoid OUT OF MEMORY exception in Spark when uing Spark's JDBC with some databases.
 
-## Overview: This is forked from cormaxed/spark-postgres. 
+## Overview: ( Note that this repository is forked from cormaxed/spark-postgres and made some small changes)
 
 My goal is to build a decent approximation of a production Apache Spark EMR environment for development and testing.
 
