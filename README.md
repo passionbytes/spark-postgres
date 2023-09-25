@@ -1,4 +1,4 @@
-# Building A Development Spark Cluster with Docker
+# Building A Development Spark Cluster with Docker & Illustrate how to avoid OUT OF MEMORY exception in Spark when uing SPark's JDBC with some databases.
 
 ## Overview: This is forked from cormaxed/spark-postgres. 
 
