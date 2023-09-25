@@ -33,6 +33,13 @@ spark:
 spark-submit:
 	cp pyspark/src/main.py /tmp/
 	docker exec spark spark-submit --master spark://spark:7077 /data/main.py
+spark-submit1:
+        cp pyspark/src/main1.py /tmp/
+        docker exec spark spark-submit --master spark://spark:7077 /data/main1.py
+
+spark-submit-corrected:
+	cp pyspark/src/maincorrected.py /tmp/
+        docker exec spark spark-submit --master spark://spark:7077 /data/maincorrected.py
 
 jupyter:
 	@docker start jupyter > /dev/null 2>&1 || docker run -p 9999:8888 \
